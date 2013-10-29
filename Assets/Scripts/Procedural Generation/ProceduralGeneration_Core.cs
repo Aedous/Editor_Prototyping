@@ -460,7 +460,7 @@ public class ProceduralGeneration_Core : MonoBehaviour
         //Aslong as we have a script we create the block inside
         if (script)
         {
-            script.CreateRoom();
+            script.CreateRoom(); // Doesn't do anything come back and fix this
         }
     }
 
@@ -496,23 +496,40 @@ public class ProceduralGeneration_Core : MonoBehaviour
                 for (int i = 0; i < childcount; i++)
                 {
                     Transform child = lastgenerationofchildren[i];
-
-                    //Create a gameobject which will be the room, which has the room script
-                    //attached to it
-                    GameObject room = new GameObject("Room");
-                    room.AddComponent<Room>();
-                    //Attach this to the child segment
-                    room.transform.parent = child.transform;
-                    
-                    //Activate the room building for the child
-                    //Doing a GIT HUB THING HERE 28/10/2013 16:36
-
-                    /*
                     Segment script = child.GetComponent<Segment>();
-                    if (script)
+
+                    if (script.width > 2 && script.height > 2) //Aslong as there's space to make a room
                     {
-                        CreateRoom(script);
-                    }*/
+                        //Check if the room already exists, if it does then remove it first
+                        if (child.childCount > 0)
+                        {
+                            GameObject child_room = child.GetChild(0).gameObject;
+                            if (child_room)
+                                DestroyImmediate(child_room);
+                        }
+
+                        //Create a gameobject which will be the room, which has the room script
+                        //attached to it
+                        GameObject room = new GameObject("Room");
+                        Room room_script = room.AddComponent<Room>();
+                        //Attach this to the child segment
+                        room.transform.parent = child.transform;
+
+                        //Activate the room building for the child
+                        //Doing a GIT HUB THING HERE 28/10/2013 16:36 - Done 17:28
+                        if (room_script)
+                        {
+                            //We have a room script so run the create room process
+                            room_script.InitRoom();
+                            room_script.CreateRoom();
+                        }
+
+
+                        if (script)
+                        {
+                            script.hasRoom = true; //Each child will have a room attached to it if passed the width/height test
+                        }
+                    }
 
                     if (i == (childcount - 1))
                     {
@@ -874,8 +891,10 @@ public class ProceduralGeneration_Core : MonoBehaviour
         //we find just children
         int childcount = segment.childCount;
 
-        if (childcount > 0)
+        if (childcount > 0) 
         {
+            //Because we are going to be adding gameobjects inside of a segment, we need to have a rule that if there
+            //is one child in the segment then it is most likely the last child in the segment tree
             for (int i = 0; i < childcount; i++)
             {
                 //Get the children and check if it has children
@@ -883,15 +902,19 @@ public class ProceduralGeneration_Core : MonoBehaviour
 
                 int children_count = child.childCount;
 
-                if (children_count > 0) //If the child aslo has children we go through again
-                {
-                    //We call this function again and add whatever whatever children we find to the list
-                    listofchildren.AddRange(ReturnListOfLastChildrenInSegment(child));
-                }
-                else //If it doesnt have children then it is the last generation so we add it to the list
+                //If the child at segment index has more than 1 child then we can assume it's
+                //not the last generation of children, however if the children count is exactly 1
+                //then we can assume it is the last generation of children in the segment tree
+                if (children_count == 1 || children_count <= 0)
                 {
                     listofchildren.Add(child);
+                    continue;
                 }
+
+                //If we have more than 1 child we cycle again
+                //We call this function again and add whatever whatever children we find to the list
+                listofchildren.AddRange(ReturnListOfLastChildrenInSegment(child));
+                
 
             }
         }

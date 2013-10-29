@@ -12,15 +12,15 @@ public class Segment : MonoBehaviour
 
     #region Structures
     [Serializable]
-    public struct SegmentPosition
+    public struct RoomPosition
     {
         public Vector2 startPoint;
         public Vector2 endPoint;
     }
-
     #endregion
+
     #region inspector variables
-    public SegmentPosition segment_position;
+    public RoomPosition segment_position;
     public int segment_index; //Used to for organizing the positioning of segments according to z axis
     public Vector2 startPoint, roomStartPoint; //References to our start point and the room we create start point
     public Vector2 endPoint, roomEndPoint; //Reference to our end point and the room we create end point
@@ -211,7 +211,7 @@ public class Segment : MonoBehaviour
 		float shiftx = (width * procedural_reference.blocksize) / 2;
 		float shifty = (height * procedural_reference.blocksize) / 2;
 		Vector3 middle = new Vector3(blockposition[0].x + shiftx, blockposition[0].y, blockposition[0].z + shifty);
-		hasRoom = true;
+		//hasRoom = true;
 		return middle;
     }
 
@@ -383,5 +383,24 @@ public class Segment : MonoBehaviour
 		transform.position = blockposition[0];
 		
 	}
+
+    public void CloneSegment(ref Segment segment)
+    {
+        //This function will set the variables for a particular segment to match it's
+        //own
+        //Set the start point and end point
+        segment.procedural_reference = this.procedural_reference;
+        segment.segment_position.startPoint = startPoint;
+        segment.segment_position.endPoint = endPoint;
+        segment.startPoint = startPoint;
+        segment.endPoint = endPoint;
+
+        //Work out width and height and set the segment variables
+        segment.CalculateWidth((int)startPoint.x, (int)endPoint.x);
+        segment.CalculateHeight((int)startPoint.y, (int)endPoint.y);
+        segment.segment_index = segment_index;
+        segment.levelPartCreated = false;
+        segment.PositionSegmentTransform();
+    }
     #endregion
 }

@@ -22,6 +22,8 @@ public class ProceduralGeneration_Editor : EditorWindow
     private ProceduralGeneration_Core pgc;
     private bool eventoccured; //This is to detect if there is an event that happens on the screen
     private bool updateview; //This is to control the amount of times the screen redraws itself ( to increase frame rate )
+    private bool drawGrid; //Option to draw grid
+    private bool drawRoom; //Option to draw room
 
     private static GUIContent
         directionContent = new GUIContent("Direction", "Pick the direction to build the grid");
@@ -155,6 +157,7 @@ public class ProceduralGeneration_Editor : EditorWindow
             {
                 //Allow redrawing
                 updateview = true; //Allow view to be updated with this button
+                HandleUtility.Repaint();
             }
 
             GUILayout.EndHorizontal();
@@ -162,6 +165,8 @@ public class ProceduralGeneration_Editor : EditorWindow
             GUILayout.BeginHorizontal();
             //Add collisions toggle
             pgc.addcollisions = GUILayout.Toggle(pgc.addcollisions, "Collisions", buttonWidth);
+            drawGrid = GUILayout.Toggle(drawGrid, "Draw Grid", buttonWidth);
+            drawRoom = GUILayout.Toggle(drawRoom, "Draw Room", buttonWidth);
             GUILayout.EndHorizontal();
 
             //Editor for cuts we want to make
@@ -174,6 +179,15 @@ public class ProceduralGeneration_Editor : EditorWindow
                 //Allow cuts
                 pgc.CreateSegmentManager(pgc.maximumrows, pgc.maximumcolumns);
                 updateview = true; //Allow view to be updated with this button
+            }
+
+            if (GUILayout.Button("Generate Cuts and Rooms", EditorStyles.miniButton, GUILayout.MaxWidth(150f)))
+            {
+                //Allow cuts
+                pgc.CreateSegmentManager(pgc.maximumrows, pgc.maximumcolumns);
+                pgc.CreateRooms();
+                updateview = true; //Allow view to be updated with this button
+
             }
 
             GUILayout.EndHorizontal();
@@ -422,17 +436,20 @@ public class ProceduralGeneration_Editor : EditorWindow
 
             //Draw visual reference for last set of children
             //Pass in segment A and B to get the list of the last children,
-            List<Transform> lastgenerationofchildren = ReturnListOfLastChildren(master.GetChild(0), master.GetChild(1));
+            List<Transform> lastgenerationofchildren = pgc.ReturnListOfLastChildren(master.GetChild(0), master.GetChild(1));
 
             //Then draw them
             for (int i = 0; i < lastgenerationofchildren.Count; i++)
             {
-                DrawVisualRectangleForSegment(lastgenerationofchildren[i], i);
+                if(drawGrid)
+                    DrawVisualRectangleForSegment(lastgenerationofchildren[i], i);
+                if(drawRoom)
+                    DrawRooms(lastgenerationofchildren[i], i);
             }
         }
          
         //After drawing all segments, we draw the room guides
-        DrawRoomGuides(); 
+        //DrawRoomGuides(); 
         
         
     }
@@ -533,13 +550,9 @@ public class ProceduralGeneration_Editor : EditorWindow
     public void DrawVisualRectangleForSegment(Transform segment, int index)
     {
         Segment script = segment.GetComponent<Segment>();
-
         //If the script exists, use it's points to create a box
         if (script)
         {
-			if(!script.hasRoom)
-				return;
-			
 			//Get the z position of the object
             Vector3 pgcposition = pgc.transform.position;
             float blocksize = pgc.blocksize;
@@ -558,7 +571,7 @@ public class ProceduralGeneration_Editor : EditorWindow
             Vector3 addition = script.segment_position.startPoint * blocksize;
             Vector3 newposition = pgcposition + addition;
             //Handles.CubeCap(0, positions[0], Quaternion.identity, (float)blocksize);
-            
+
             Color fill = Color.white;
             filter += segment_index * 20;
             int outlinefilter = filter;
@@ -585,7 +598,42 @@ public class ProceduralGeneration_Editor : EditorWindow
 
             //Handles.RectangleCap(0, newposition, Quaternion.identity, blocksize);
             Handles.DrawSolidRectangleWithOutline(positions, fill, outlinecolor);
-			
+        }
+    }
+
+    public void DrawRooms(Transform segment, int index)
+    {
+        Segment script = segment.GetComponent<Segment>();
+        //If the script exists, use it's points to create a box
+        if (!script)
+            return;
+
+        //Draw Rooms inside of the segments
+        if (script.hasRoom)
+        {
+            //Draw the rooms
+            //Filter through and apply the positions, according to our map
+            Room room_script = script.GetComponentInChildren<Room>(); //Mostly likely the first child
+
+            if (!room_script)
+                room_script = script.transform.GetChild(0).GetComponent<Room>(); //Try to force the first child
+
+            if (!room_script)
+                return;
+
+            if (room_script.room_created) //If the room has been created
+            {
+                Vector2 room_startPoint = room_script.start_point;
+                Vector2 room_endPoint = room_script.end_point;
+
+                Vector2 room_rightShift = Vector2.zero;//new Vector2(zposition, 0) * -1;
+                Vector3[] room_positions = new Vector3[3];
+
+                //positions = pgc.CalculatePoints(startPoint, endPoint, 0, pgc.creationDirection);
+                room_positions = pgc.CalculatePoints(room_startPoint + room_rightShift, room_endPoint + room_rightShift, 0, pgc.creationDirection);
+                Handles.DrawSolidRectangleWithOutline(room_positions, Color.green, Color.red);
+            }
+
         }
     }
 

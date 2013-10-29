@@ -1,5 +1,7 @@
 using UnityEngine;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 
 public static class Global{
 	
@@ -13,5 +15,4 @@ public static class Global{
         PUSH, //Opposite of pull
         DUPLICATE
 	}
-	
 }
