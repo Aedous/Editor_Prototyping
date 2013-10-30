@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -20,6 +21,7 @@ public class ProceduralGeneration_Core : MonoBehaviour
     public int numberOfSegments; //number of segments we have
     public int numberOfCuts; //Number of cut's to make
     public int range; //The range to decide on how we cut the segment.
+    public int[,] grid_params; //This is to set whether a space is empty or occupied
     #endregion
 
     #region public variables
@@ -36,7 +38,7 @@ public class ProceduralGeneration_Core : MonoBehaviour
     public bool addcollisions { get; set; }
     public int CutDirection { get; set; } //Our cutting direction
     public int DifferenceAllowance { get; set; }
-    public Object[] blockcollection { get; set; } //Used to show what kind of blocks we can use
+    public UnityEngine.Object[] blockcollection { get; set; } //Used to show what kind of blocks we can use
     #endregion
 
     #region private variables
@@ -253,38 +255,38 @@ public class ProceduralGeneration_Core : MonoBehaviour
         switch(direction)
         {
             case CreationDirection.FLAT:
-                {
-                    //Going to be drawn flat so we shift it along the
-                    startPoint = new Vector3(startPoint.x + parentposition.x, startPoint.y + parentposition.y, parentposition.z);
-                    endPoint = new Vector3(endPoint.x + parentposition.x, endPoint.y + parentposition.y, parentposition.z);
-                    //float padding = blocksize / 2; //Padding to position correctly
-					float padding = 0;
+            {
+                //Going to be drawn flat so we shift it along the
+                startPoint = new Vector3(startPoint.x + parentposition.x, startPoint.y + parentposition.y, parentposition.z);
+                endPoint = new Vector3(endPoint.x + parentposition.x, endPoint.y + parentposition.y, parentposition.z);
+                //float padding = blocksize / 2; //Padding to position correctly
+				float padding = 0;
 
 
-                    /*points[0] = new Vector3(startPoint.x - padding, startPoint.y - padding, parentposition.z + shift);
-                    points[1] = new Vector3(startPoint.x - padding, endPoint.y + padding, parentposition.z + shift);
-                    points[2] = new Vector3(endPoint.x + padding, endPoint.y + padding, parentposition.z + shift);
-                    points[3] = new Vector3(endPoint.x + padding, startPoint.y - padding, parentposition.z + shift);*/
+                /*points[0] = new Vector3(startPoint.x - padding, startPoint.y - padding, parentposition.z + shift);
+                points[1] = new Vector3(startPoint.x - padding, endPoint.y + padding, parentposition.z + shift);
+                points[2] = new Vector3(endPoint.x + padding, endPoint.y + padding, parentposition.z + shift);
+                points[3] = new Vector3(endPoint.x + padding, startPoint.y - padding, parentposition.z + shift);*/
 
-                    points[0] = new Vector3(startPoint.x - padding, parentposition.y + shift, startPoint.y - padding);
-                    points[1] = new Vector3(startPoint.x - padding, parentposition.y + shift, endPoint.y + padding);
-                    points[2] = new Vector3(endPoint.x + padding,parentposition.y + shift, endPoint.y + padding);
-                    points[3] = new Vector3(endPoint.x + padding, parentposition.y + shift, startPoint.y - padding);
-                }
-                break;
+                points[0] = new Vector3(startPoint.x - padding, parentposition.y + shift, startPoint.y - padding);
+                points[1] = new Vector3(startPoint.x - padding, parentposition.y + shift, endPoint.y + padding);
+                points[2] = new Vector3(endPoint.x + padding,parentposition.y + shift, endPoint.y + padding);
+                points[3] = new Vector3(endPoint.x + padding, parentposition.y + shift, startPoint.y - padding);
+            }
+            break;
             case CreationDirection.UPRIGHT:
-                {
-                    startPoint = new Vector3(startPoint.x + parentposition.x, startPoint.y + parentposition.y, parentposition.z);
-                    endPoint = new Vector3(endPoint.x + parentposition.x, endPoint.y + parentposition.y, parentposition.z);
-                    //float padding = blocksize / 2; //Padding to position correctly
-					float padding = 0;
+            {
+                startPoint = new Vector3(startPoint.x + parentposition.x, startPoint.y + parentposition.y, parentposition.z);
+                endPoint = new Vector3(endPoint.x + parentposition.x, endPoint.y + parentposition.y, parentposition.z);
+                //float padding = blocksize / 2; //Padding to position correctly
+				float padding = 0;
 
-                    points[0] = new Vector3(startPoint.x - padding, startPoint.y - padding, parentposition.z + shift);
-                    points[1] = new Vector3(startPoint.x - padding, endPoint.y + padding, parentposition.z + shift);
-                    points[2] = new Vector3(endPoint.x + padding, endPoint.y + padding, parentposition.z + shift);
-                    points[3] = new Vector3(endPoint.x + padding, startPoint.y - padding, parentposition.z + shift);
-                }
-                break;
+                points[0] = new Vector3(startPoint.x - padding, startPoint.y - padding, parentposition.z + shift);
+                points[1] = new Vector3(startPoint.x - padding, endPoint.y + padding, parentposition.z + shift);
+                points[2] = new Vector3(endPoint.x + padding, endPoint.y + padding, parentposition.z + shift);
+                points[3] = new Vector3(endPoint.x + padding, startPoint.y - padding, parentposition.z + shift);
+            }
+            break;
         }
         
         
@@ -498,7 +500,7 @@ public class ProceduralGeneration_Core : MonoBehaviour
                     Transform child = lastgenerationofchildren[i];
                     Segment script = child.GetComponent<Segment>();
 
-                    if (script.width > 2 && script.height > 2) //Aslong as there's space to make a room
+                    if (script.width > 4 && script.height > 4) //Aslong as there's space to make a room
                     {
                         //Check if the room already exists, if it does then remove it first
                         if (child.childCount > 0)
@@ -615,6 +617,8 @@ public class ProceduralGeneration_Core : MonoBehaviour
 
     public void CreateSegmentManager(int row_length, int col_length)
     {
+        //Initiate our 2d array as well
+        grid_params = new int[row_length,col_length];
         if (levelPartsManager == null)
         {
             //Create it
@@ -738,7 +742,38 @@ public class ProceduralGeneration_Core : MonoBehaviour
 
             }
         }
+
+        //A Star Path Finding
+        AStar astar = GetComponent<AStar>();
+
+        if (astar)
+        {
+            //Work out the distance between two things
+            astar.InitAStar(maximumrows, maximumcolumns);
+            astar.ResetAStar();
+            astar.WorkOutPath(new Vector2(0, 0), new Vector2(1, 1));
+        }
+        else
+            Debug.Log("No A Star Component");
        
+    }
+
+    //Useful function for filling grid properties from a start point to end point
+    public void FillGridParam(Vector2 startpoint, Vector2 endpoint, int toggle)
+    {
+        //This function takes care of making sure the grid_params which is in charge of holding status' of grids
+        //is filled accordingly
+        //the toggle variable refers to off or on in this case ( we have to take care of the spaces which are not being used )
+        //Slide across the room to record the params
+        for (int x = (int)startpoint.x; x < (int)endpoint.x; x++)
+        {
+            //Loop through the columns ( y )
+            for (int y = (int)startpoint.y; y < (int)endpoint.y; y++)
+            {
+                grid_params[x, y] = toggle;
+            }
+        }
+
     }
 
     public List<Transform> FindSegmentsToCut(Transform segment) //We pass in the transform to check if it has children
@@ -803,7 +838,7 @@ public class ProceduralGeneration_Core : MonoBehaviour
             //Aslong as we can cut this segment in half, 
             //we then pick a value that is between start_point + 1 to make sure we always make a cut if we can
             //and end_point - 1 (can add padding for cuts) if we want padding
-            randomnumber = Random.Range(start + DifferenceAllowance, end);
+            randomnumber = UnityEngine.Random.Range(start + DifferenceAllowance, end);
 
             return randomnumber;
         }
@@ -819,7 +854,7 @@ public class ProceduralGeneration_Core : MonoBehaviour
         int decision = -1; //variable to decide whether to cut vertically or horizontal 0 - vertically 1 - horizontally
 
         //Generate a random number between 0 - range if we are 50 or greater we cut horizontally (test threshold)
-        int randomnumber = Random.Range(0, range + 1); //range never returns max so add 1 to range
+        int randomnumber = UnityEngine.Random.Range(0, range + 1); //range never returns max so add 1 to range
         int middlerange = range / 2;
 
         if (randomnumber >= middlerange)

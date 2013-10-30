@@ -24,6 +24,7 @@ public class ProceduralGeneration_Editor : EditorWindow
     private bool updateview; //This is to control the amount of times the screen redraws itself ( to increase frame rate )
     private bool drawGrid; //Option to draw grid
     private bool drawRoom; //Option to draw room
+    private bool drawGridOutline; //Option to draw grid outline
 
     private static GUIContent
         directionContent = new GUIContent("Direction", "Pick the direction to build the grid");
@@ -43,7 +44,6 @@ public class ProceduralGeneration_Editor : EditorWindow
     {
         //Get existing open window or if none, create it
         ProceduralGeneration_Editor window = (ProceduralGeneration_Editor)EditorWindow.GetWindow(typeof(ProceduralGeneration_Editor));
-
     }
 
     // Use this for initialization
@@ -89,6 +89,75 @@ public class ProceduralGeneration_Editor : EditorWindow
                     DrawAllSegments(reference);
                 }
             }
+
+            //Draw Grid Outline
+            if (drawGridOutline)
+            {
+                for (int x = 0; x <= pgc.maximumrows; x++)
+                {
+                    //Draw Horizontal Grid
+                    Vector3[] positions = new Vector3[3];
+                    Vector2 xstartpoint = new Vector2(x, 0f);
+                    Vector2 xendpoint = new Vector2(pgc.maximumrows, pgc.maximumcolumns);
+                    positions = pgc.CalculatePoints(xstartpoint, xendpoint, 0, pgc.creationDirection);
+                    Handles.color = Color.black;
+                    for (int i = 0; i < positions.Length; i++)
+                    {
+                        positions[i].y -= 1f;
+                    }
+
+                    Handles.DrawLine(positions[0], positions[1]);
+                }
+
+                for (int y = 0; y <= pgc.maximumcolumns; y++)
+                {
+                    //Draw Horizontal Grid
+                    Vector3[] positions = new Vector3[3];
+                    Vector2 ystartpoint = new Vector2(0f, y);
+                    Vector2 yendpoint = new Vector2(pgc.maximumrows, pgc.maximumcolumns);
+                    positions = pgc.CalculatePoints(ystartpoint, yendpoint, 0, pgc.creationDirection);
+
+                    //Shift it up to show difference
+                    for (int i = 0; i < positions.Length; i++)
+                    {
+                        positions[i].y -= 1f;
+                    }
+
+                    Handles.color = Color.black;
+                    Handles.DrawLine(positions[0], positions[3]);
+                    Handles.color = Color.white;
+                }
+
+                //Draw Grid Properties
+                for (int x = 0; x < pgc.maximumrows; x++)
+                {
+                    //Loop through the columns ( y )
+                    for (int y = 0; y < pgc.maximumcolumns; y++)
+                    {
+                        if (pgc.grid_params[x, y] == 1)
+                        {
+                            //Draw a cube cape
+                            Vector3[] positions = new Vector3[3];
+                            Vector2 ystartpoint = new Vector2(x, y);
+                            Vector2 yendpoint = new Vector2(x + 1, y + 1);
+                            positions = pgc.CalculatePoints(ystartpoint, yendpoint, 0, pgc.creationDirection);
+
+                            //Shift it up to show difference
+                            for (int i = 0; i < positions.Length; i++)
+                            {
+                                positions[i].y -= 1f;
+                            }
+                            Handles.DrawSolidRectangleWithOutline(positions, Color.black, Color.red);
+                        }
+                        else
+                        {
+                            //Handles.DrawSolidRectangleWithOutline(positions, Color.white, Color.black);
+                        }
+                    }
+                }
+            }
+
+            DrawAStarGuide();
         }
 
         //Only repaint the scene if we have to, to save on frame rate
@@ -148,7 +217,8 @@ public class ProceduralGeneration_Editor : EditorWindow
             if (GUILayout.Button("Show Grid", EditorStyles.miniButtonMid, buttonWidth))
             {
                 //Toggle the grid
-                ToggleGridOutline(pgc.showGrid);
+                //ToggleGridOutline(pgc.showGrid);
+                drawGridOutline = !drawGridOutline;
             }
 
 
@@ -210,10 +280,19 @@ public class ProceduralGeneration_Editor : EditorWindow
                 pgc.ClearLevelParts();
             }
 
-
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Find Path", EditorStyles.miniButton, buttonWidth))
+            {
+                AStar astar = pgc.GetComponent<AStar>();
+
+                if (astar)
+                {
+                    astar.ResetAStar();
+                    astar.WorkOutPath(astar.start_point, astar.end_point);
+                }
+            }
 
             //Difference allowance, to judge size of boxes
             GUILayout.Label("Difference Cap");
@@ -634,6 +713,70 @@ public class ProceduralGeneration_Editor : EditorWindow
                 Handles.DrawSolidRectangleWithOutline(room_positions, Color.green, Color.red);
             }
 
+        }
+    }
+
+    public void DrawAStarGuide()
+    {
+        if (pgc)
+        {
+            AStar astar = pgc.GetComponent<AStar>();
+            if (astar)
+            {
+                //Time to draw something
+                //Draw the start point
+                Vector3[] p = new Vector3[3];
+                Vector2 sp = astar.start_point;
+                Vector2 ep = new Vector2(sp.x + 1, sp.y + 1);
+                p = pgc.CalculatePoints(sp, ep, 0, pgc.creationDirection);
+
+                //Shift it up to show difference
+                for (int i = 0; i < p.Length; i++)
+                {
+                    p[i].y -= 1f;
+                }
+
+                Handles.DrawSolidRectangleWithOutline(p, Color.blue, Color.black);
+
+                //Draw the end point
+                p = new Vector3[3];
+                sp = astar.end_point;
+                ep = new Vector2(sp.x + 1, sp.y + 1);
+                p = pgc.CalculatePoints(sp, ep, 0, pgc.creationDirection);
+
+                //Shift it up to show difference
+                for (int i = 0; i < p.Length; i++)
+                {
+                    p[i].y -= 1f;
+                }
+
+                Handles.DrawSolidRectangleWithOutline(p, Color.red, Color.black);
+
+                //Cycle through the complete path and draw the squares
+                List<Vector2> paths = astar.complete_path;
+                foreach (Vector2 path in astar.complete_path)
+                {
+                    //Draw Horizontal Grid
+                    Vector3[] positions = new Vector3[3];
+                    Vector2 startpoint = path;
+                    Vector2 endpoint = new Vector2(path.x + 1, path.y + 1);
+                    positions = pgc.CalculatePoints(startpoint, endpoint, 0, pgc.creationDirection);
+
+                    //Shift it up to show difference
+                    for (int i = 0; i < positions.Length; i++)
+                    {
+                        positions[i].y -= 1f;
+                    }
+
+                    if (path == astar.end_point)
+                    {
+                        Handles.DrawSolidRectangleWithOutline(positions, Color.red, Color.black);
+                    }
+                    else
+                        Handles.DrawSolidRectangleWithOutline(positions, Color.cyan, Color.white);
+                }
+
+            }
         }
     }
 

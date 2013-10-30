@@ -92,6 +92,9 @@ public class Room : MonoBehaviour
             case RoomBuildType.GROW:
                 break;
         }
+
+        //Update the grid
+        parent_segment.procedural_reference.FillGridParam(start_point, end_point, 1);
     }
 
     public void RandomRoomCreation()
@@ -122,10 +125,10 @@ public class Room : MonoBehaviour
         int[] shiftpoints = SpreadAmount();
 
         //Pick a random value between the numbers to spread out by
-        int shiftup = UnityEngine.Random.Range(2, shiftpoints[0]);
-        int shiftright = UnityEngine.Random.Range(2, shiftpoints[1]);
-        int shiftdown = UnityEngine.Random.Range(2, shiftpoints[2]);
-        int shiftleft = UnityEngine.Random.Range(2, shiftpoints[3]);
+        int shiftup = UnityEngine.Random.Range(4, shiftpoints[0]);
+        int shiftright = UnityEngine.Random.Range(4, shiftpoints[1]);
+        int shiftdown = UnityEngine.Random.Range(4, shiftpoints[2]);
+        int shiftleft = UnityEngine.Random.Range(4, shiftpoints[3]);
 
         start_point = new Vector2(room_pickpoint.x - shiftleft, room_pickpoint.y - shiftdown);
         end_point = new Vector2(room_pickpoint.x + shiftright, room_pickpoint.y + shiftup);
@@ -190,7 +193,7 @@ public class Room : MonoBehaviour
         //To create the box mesh we need to find out the
         //width in this case - applies to length
         //
-        float boxheight = UnityEngine.Random.Range(5f, 50f);
+        float boxheight = UnityEngine.Random.Range(1f, 2f);
         boxheight *= procedural_reference.blocksize;
         CreateBoxMesh(width * procedural_reference.blocksize, boxheight, height * procedural_reference.blocksize);
 
